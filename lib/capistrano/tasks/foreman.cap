@@ -5,9 +5,16 @@ namespace :foreman do
       log_path         = shared_path.join('log')
       environment_path = fetch(:foreman_env)
 
-      within release_path do
-        execute :bundle, "exec foreman export upstart /etc/init -a #{fetch(:application)} -u #{host.user} -l #{log_path} -e #{environment_path}"
-      end
+      # requires that user has sudo permission for 'mv' command
+      foreman_temp = "/tmp/#{fetch(:application)}-foreman"
+      execute [
+        "mkdir -p #{foreman_temp}",
+        "cd #{release_path}",
+        "(#{fetch(:rbenv_prefix)} bundle exec foreman export upstart #{foreman_temp} -a #{fetch(:application)} -u #{host.user} -l #{log_path} -e #{environment_path})",
+        "sudo mv #{foreman_temp}/#{fetch(:application)}*.conf /etc/init/",
+        "rm -rf #{foreman_temp}"
+      ].join(' && ')
+
     end
   end
 
